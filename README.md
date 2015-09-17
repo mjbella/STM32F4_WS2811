@@ -8,6 +8,6 @@ The update_string function outputs data to the WS2811 string by transmitting dif
 
 Setup
 -----
-8MHz Xtal \-\-\-\-> Div/8 \-\-\-\-> PLL x 408 \-\-\-\-> Div/4 \-\-\-\-> SYSCLK \-\-\-\-> PPRE1/2 \-\-\-\-> 51MHz for SPI1 \(with another DIV/4\ inside the SPI peripheral)  
+8MHz Xtal \-\-> Div/8 \-\-> PLL x 408 \-\-> Div/4 \-\-> SYSCLK \-\-> PPRE1/2 \-\-> 51MHz for SPI1 \(with DIV/4\ inside the SPI peripheral)  
   
 This gives us 12.75MHz for the SPI clock. Using 16 SPI bits per WS2811 bit period we get close to the WS2811's desired bit rate at 1.25us per bit period.
