@@ -4,7 +4,7 @@ About
 ----
 This project uses the SPI peripheral in a STM32F4 to communicate with WS2811 RGB LEDs. The PLL on the STM32F4 is tuned to 408MHz, and a total divisor of 32 is applied before going to SPI1. This makes it so that 16bits from the SPI output matchup reasonably well with the expected bit period of 2.5us.  
   
-The update_string function outputs data to the WS2811 string by transmitting different numbers of sequential ones in order to generate the duty cycles that the WS2811 expected for a 'one' vs 'zero' bit. 
+The update_string function outputs data to the WS2811 string by transmitting different numbers of sequential ones in order to generate the duty cycles that the WS2811 expects for a 'one' vs 'zero' bit. 
 
 Setup
 -----
