@@ -42,7 +42,14 @@ void setup_main_clock(void);
 void update_string(uint8_t *data, uint16_t len);
 void shiftdecay(color *data, color *buf, uint16_t len);
 
+void memcpy(void *dst, const void *src, int n) {
+	const uint8_t *s = src;
+	uint8_t *d = dst;
 
+	while(n--) {
+		*d++ = *s++;
+	}
+}
 
 static void gpio_setup(void)
 {
