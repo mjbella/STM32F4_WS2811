@@ -25,11 +25,24 @@
 #include <libopencm3/stm32/pwr.h>
 #include <libopencm3/stm32/flash.h>
 
+#define N_LEDS 8
+
+// Single pixel RGB data structure. Make an array out of this to store RGB data for a string.
+typedef struct {
+	uint8_t r;
+	uint8_t g;
+	uint8_t b;
+} color;
+
+
 void setup_spi(void);
 void setup_peripheral_clocks(void);
 void setup_main_clock(void);
 
 void update_string(uint8_t *data, uint16_t len);
+void shiftdecay(color *data, color *buf, uint16_t len);
+
+
 
 static void gpio_setup(void)
 {
@@ -130,49 +143,40 @@ void setup_spi()
 
 int main(void)
 {
-	int i, j;
+	uint32_t i, j;
 	setup_main_clock();
 	gpio_setup();
         setup_peripheral_clocks();
 
 	setup_spi();
-	uint8_t test_bytes[3] = {0, 0, 0};
-
-	/* Blink the LED (PC8) on the board. */
+	
+	color led_data[N_LEDS];
+	color scratch[N_LEDS];
+	
+	//union leds 
+	
+	j = 0;
 	while (1) {
-		/* Manually: */
-		// GPIOD_BSRR = GPIO12;		/* LED off */
-		// for (i = 0; i < 1000000; i++)	/* Wait a bit. */
-		//	__asm__("nop");
-		// GPIOD_BRR = GPIO12;		/* LED on */
-		// for (i = 0; i < 1000000; i++)	/* Wait a bit. */
-		//	__asm__("nop");
-
-		/* Using API functions gpio_set()/gpio_clear(): */
-		// gpio_set(GPIOD, GPIO12);	/* LED off */
-		// for (i = 0; i < 1000000; i++)	/* Wait a bit. */
-		//	__asm__("nop");
-		// gpio_clear(GPIOD, GPIO12);	/* LED on */
-		// for (i = 0; i < 1000000; i++)	/* Wait a bit. */
-		//	__asm__("nop");
-
-		/* Using API function gpio_toggle(): */
-		gpio_toggle(GPIOD, GPIO12);	/* LED on/off */
+		j++;
+		//gpio_toggle(GPIOD, GPIO12);	/* LED on/off */
 		
-		//spi_write(SPI1, 0xFF);
-		//spi_write(SPI1, 0x00);
-		//spi_write(SPI1, 0xAA);
-		//spi_write(SPI1, 0x00);
+		// Blink the first LED green sometimes
+		if(!(j % 1000)) {
+			led_data[0].g = 255;
+			gpio_set(GPIOD, GPIO12);
+		}	
+		if(!((j % 1000) + 10)) {
+			led_data[0].g = 0;
+			gpio_clear(GPIOD, GPIO12);
+		}	
 		
+		// Make a cool effect plz!
+		//shiftdecay(led_data, scratch, N_LEDS);
 		
-		update_string(test_bytes, 3);
-		test_bytes[0] += 1;
-
-		//for(j = 0; j < 9; j++)
-		//{
-		//	test_bytes[j] += 1;
-		//}
+		// Send the new data to the LED string
+		update_string((uint8_t *)led_data, N_LEDS*3);
 		
+		// Delay
 		for (i = 0; i < 200000; i++) {	/* Wait a bit. */
 			__asm__("nop");
 		}
@@ -182,17 +186,55 @@ int main(void)
 
 }
 
+void shiftdecay(color *data, color *buf, uint16_t len)
+{
+	uint16_t i = 0;
+	
+	// Shift & initial decay into buffer
+	for(i = 1; i < len; i++)
+	{
+		buf[i].r = data[i-1].r/2;
+		buf[i].g = data[i-1].g/2;
+		buf[i].b = data[i-1].b/2;
+	}
+
+	// Add buf back in & decay time based decay
+	for(i = 1; i < len; i++)
+	{
+		data[i].r += buf[i-1].r;
+		data[i].g += buf[i-1].g;
+		data[i].b += buf[i-1].b;
+		
+		data[i].r *= 0.5;
+		data[i].g *= 0.5;
+		data[i].b *= 0.5;
+	}
+}
+
 /* turn bits into pulses of the correct ratios for the WS2811 by making *
  * bytes with the correct number of ones & zeros in the right order.    */
-void update_string(uint8_t *data, uint16_t len)
+void update_string(color *data, uint16_t len)
 {
+	// unions, becuase!
+	union leds {
+		color colors[N_LEDS];
+		uint8_t bytes[N_LEDS*3];
+	}; 
+	
+	union leds led_data;
+	
+	memcpy(led_data.colors, data, N_LEDS);
+	
 	uint16_t i = 0;
 	int16_t j = 0;
 	uint8_t tmp = 0;
-		
+	
+	
+	
+	len = len * 3;
 	for(i=0; i < len; i++)
 	{
-		tmp = data[i];
+		tmp = leds.bytes[i];
 		for(j = 7; j > 0; j--)
 		{
 			if (tmp & (0x01 << j))
