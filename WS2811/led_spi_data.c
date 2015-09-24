@@ -158,7 +158,7 @@ int main(void)
 	for(x=0; x < N_LEDS; x++)
 	{
 		led_data[x].r = 0;
-		led_data[x].g = 255;
+		led_data[x].g = 0;
 		led_data[x].b = 0;
 	}
 	
@@ -177,7 +177,7 @@ int main(void)
 		}	
 		
 		// Make a cool effect plz!
-		//shiftdecay(led_data, scratch, N_LEDS);
+		shiftdecay(led_data, scratch, N_LEDS);
 		
 		// Send the new data to the LED string
 		update_string(led_data, N_LEDS);
