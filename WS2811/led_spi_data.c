@@ -30,8 +30,8 @@
 
 // Single pixel RGB data structure. Make an array out of this to store RGB data for a string.
 typedef struct {
-	uint8_t r;
-	uint8_t g;
+	uint8_t g; //r
+	uint8_t r; //g
 	uint8_t b;
 } color;
 
@@ -42,16 +42,6 @@ void setup_main_clock(void);
 
 void update_string(color *data, uint16_t len);
 void shiftdecay(color *data, color *buf, uint16_t len);
-//void memcpy(void *dst, const void *src, int n);
-
-//void memcpy(void *dst, const void *src, int n) {
-//	const uint8_t *s = src;
-//	uint8_t *d = dst;
-//
-//	while(n--) {
-//		*d++ = *s++;
-//	}
-//}
 
 static void gpio_setup(void)
 {
@@ -168,13 +158,12 @@ int main(void)
 	for(x=0; x < N_LEDS; x++)
 	{
 		led_data[x].r = 0;
-		led_data[x].g = 0;
+		led_data[x].g = 255;
 		led_data[x].b = 0;
 	}
 	
 	j = 0;
 	while (1) {
-		j++;
 		//gpio_toggle(GPIOD, GPIO12);	/* LED on/off */
 		
 		// Blink the first LED green sometimes
@@ -194,9 +183,10 @@ int main(void)
 		update_string(led_data, N_LEDS);
 		
 		// Delay
-		for (i = 0; i < 20000; i++) {	/* Wait a bit. */
+		for (i = 0; i < 100000; i++) {	/* Wait a bit. */
 			__asm__("nop");
 		}
+		j++;
 	}
 
 	return 0;
@@ -210,21 +200,21 @@ void shiftdecay(color *data, color *buf, uint16_t len)
 	// Shift & initial decay into buffer
 	for(i = 1; i < len; i++)
 	{
-		buf[i].r = data[i-1].r/2;
-		buf[i].g = data[i-1].g/2;
-		buf[i].b = data[i-1].b/2;
+		buf[i].r = data[i-1].r;
+		buf[i].g = data[i-1].g;
+		buf[i].b = data[i-1].b;
 	}
 
 	// Add buf back in & decay time based decay
 	for(i = 1; i < len; i++)
 	{
-		data[i].r += buf[i-1].r;
-		data[i].g += buf[i-1].g;
-		data[i].b += buf[i-1].b;
+		data[i].r = buf[i].r;
+		data[i].g = buf[i].g;
+		data[i].b = buf[i].b;
 		
-		data[i].r *= 0.5;
-		data[i].g *= 0.5;
-		data[i].b *= 0.5;
+		//data[i].r -= 1;
+		//data[i].g -= 1;
+		//data[i].b -= 1;
 	}
 }
 
@@ -232,15 +222,7 @@ void shiftdecay(color *data, color *buf, uint16_t len)
  * bytes with the correct number of ones & zeros in the right order.    */
 void update_string(color *data, uint16_t len)
 {
-	// unions, becuase!
-	union leds {
-		color colors[N_LEDS];
-		uint8_t bytes[N_LEDS*3];
-	}; 
-	
-	union leds led_data;
-	
-	memcpy(led_data.colors, data, N_LEDS*3);
+	uint8_t *bytearray = (uint8_t *) data;
 	
 	uint16_t i = 0;
 	int16_t j = 0;
@@ -249,18 +231,20 @@ void update_string(color *data, uint16_t len)
 	len = len * 3;
 	for(i=0; i < len; i++)
 	{
-		tmp = led_data.bytes[i];
-		for(j = 7; j > 0; j--)
+		tmp = bytearray[i];
+		for(j = 7; j >= 0; j--)
 		{
 			if (tmp & (0x01 << j))
 			{
 				// generate the sequence to represent a 'one' to the WS2811.
 				spi_send(SPI1, 0xFFF0);
+					     //0b1111 1111 1111 0000
 			}
 			else
 			{
 				// generate the sequence to represent a 'zero'.
 				spi_send(SPI1, 0xE000);
+					     //0b1110 0000 0000 0000
 			}
 		}
 	}
