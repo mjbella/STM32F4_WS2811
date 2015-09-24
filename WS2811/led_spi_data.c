@@ -24,8 +24,9 @@
 #include <libopencm3/stm32/spi.h>
 #include <libopencm3/stm32/pwr.h>
 #include <libopencm3/stm32/flash.h>
+#include <stdlib.h>
 
-#define N_LEDS 8
+#define N_LEDS 16
 
 // Single pixel RGB data structure. Make an array out of this to store RGB data for a string.
 typedef struct {
@@ -39,17 +40,18 @@ void setup_spi(void);
 void setup_peripheral_clocks(void);
 void setup_main_clock(void);
 
-void update_string(uint8_t *data, uint16_t len);
+void update_string(color *data, uint16_t len);
 void shiftdecay(color *data, color *buf, uint16_t len);
+//void memcpy(void *dst, const void *src, int n);
 
-void memcpy(void *dst, const void *src, int n) {
-	const uint8_t *s = src;
-	uint8_t *d = dst;
-
-	while(n--) {
-		*d++ = *s++;
-	}
-}
+//void memcpy(void *dst, const void *src, int n) {
+//	const uint8_t *s = src;
+//	uint8_t *d = dst;
+//
+//	while(n--) {
+//		*d++ = *s++;
+//	}
+//}
 
 static void gpio_setup(void)
 {
@@ -162,17 +164,25 @@ int main(void)
 	
 	//union leds 
 	
+	int x = 0;
+	for(x=0; x < N_LEDS; x++)
+	{
+		led_data[x].r = 0;
+		led_data[x].g = 0;
+		led_data[x].b = 0;
+	}
+	
 	j = 0;
 	while (1) {
 		j++;
 		//gpio_toggle(GPIOD, GPIO12);	/* LED on/off */
 		
 		// Blink the first LED green sometimes
-		if(!(j % 1000)) {
+		if((j % 1000) == 0) {
 			led_data[0].g = 255;
 			gpio_set(GPIOD, GPIO12);
 		}	
-		if(!((j % 1000) + 10)) {
+		if((j % 1000) == 100) {
 			led_data[0].g = 0;
 			gpio_clear(GPIOD, GPIO12);
 		}	
@@ -181,10 +191,10 @@ int main(void)
 		//shiftdecay(led_data, scratch, N_LEDS);
 		
 		// Send the new data to the LED string
-		update_string((uint8_t *)led_data, N_LEDS*3);
+		update_string(led_data, N_LEDS);
 		
 		// Delay
-		for (i = 0; i < 200000; i++) {	/* Wait a bit. */
+		for (i = 0; i < 20000; i++) {	/* Wait a bit. */
 			__asm__("nop");
 		}
 	}
@@ -230,18 +240,16 @@ void update_string(color *data, uint16_t len)
 	
 	union leds led_data;
 	
-	memcpy(led_data.colors, data, N_LEDS);
+	memcpy(led_data.colors, data, N_LEDS*3);
 	
 	uint16_t i = 0;
 	int16_t j = 0;
 	uint8_t tmp = 0;
 	
-	
-	
 	len = len * 3;
 	for(i=0; i < len; i++)
 	{
-		tmp = leds.bytes[i];
+		tmp = led_data.bytes[i];
 		for(j = 7; j > 0; j--)
 		{
 			if (tmp & (0x01 << j))
