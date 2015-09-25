@@ -25,13 +25,14 @@
 #include <libopencm3/stm32/pwr.h>
 #include <libopencm3/stm32/flash.h>
 #include <stdlib.h>
+#include <math.h>
 
 #define N_LEDS 16
 
 // Single pixel RGB data structure. Make an array out of this to store RGB data for a string.
 typedef struct {
-	uint8_t g; //r
-	uint8_t r; //g
+	uint8_t g;
+	uint8_t r;
 	uint8_t b;
 } color;
 
@@ -167,11 +168,11 @@ int main(void)
 		//gpio_toggle(GPIOD, GPIO12);	/* LED on/off */
 		
 		// Blink the first LED green sometimes
-		if((j % 1000) == 0) {
+		if((j % 100) == 0) {
 			led_data[0].g = 255;
 			gpio_set(GPIOD, GPIO12);
 		}	
-		if((j % 1000) == 100) {
+		if((j % 100) == 2) {
 			led_data[0].g = 0;
 			gpio_clear(GPIOD, GPIO12);
 		}	
@@ -183,7 +184,7 @@ int main(void)
 		update_string(led_data, N_LEDS);
 		
 		// Delay
-		for (i = 0; i < 100000; i++) {	/* Wait a bit. */
+		for (i = 0; i < 200000; i++) {	/* Wait a bit. */
 			__asm__("nop");
 		}
 		j++;
@@ -191,6 +192,28 @@ int main(void)
 
 	return 0;
 
+}
+
+void subfloor(color *data, uint8_t d, uint16_t len)
+{
+	uint16_t i = 0;
+	int16_t tmpr, tmpg, tmpb;
+	for(i=0; i < len; i++)
+	{
+		tmpr = data[i].r - data[i].r/6;
+		if(tmpr < 0) tmpr = 0;
+		
+		tmpg = data[i].g - data[i].g/6;
+		if(tmpg < 0) tmpg = 0;
+		
+		tmpb = data[i].b - data[i].b/6;
+		if(tmpb < 0) tmpb = 0;
+		
+		data[i].r = tmpr;
+		data[i].g = tmpg;
+		data[i].b = tmpb;
+	}
+	
 }
 
 void shiftdecay(color *data, color *buf, uint16_t len)
@@ -205,17 +228,19 @@ void shiftdecay(color *data, color *buf, uint16_t len)
 		buf[i].b = data[i-1].b;
 	}
 
-	// Add buf back in & decay time based decay
+	// Add buf back in
 	for(i = 1; i < len; i++)
 	{
 		data[i].r = buf[i].r;
 		data[i].g = buf[i].g;
 		data[i].b = buf[i].b;
-		
-		//data[i].r -= 1;
-		//data[i].g -= 1;
-		//data[i].b -= 1;
 	}
+	data[0].r = data[len-1].r;
+	data[0].g = data[len-1].g;
+	data[0].b = data[len-1].b;
+
+	// Decay (without underflowing)
+	subfloor(data, 5, N_LEDS);
 }
 
 /* turn bits into pulses of the correct ratios for the WS2811 by making *
